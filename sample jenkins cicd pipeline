@@ -1,0 +1,23 @@
+node{
+    stage('pulling code from github'){
+        git credentialsId: 'github-id', url: 'https://github.com/nithinofficial/bookmyshow2022.git'
+    }
+    stage('build with maven'){
+       sh 'mvn install' 
+    }
+    stage('buid iimage from docker'){
+        sh 'docker build -t nithindockerhub1/bms-v1 .'
+    }
+    stage('pushing the image to docker'){
+        withCredentials([string(credentialsId: 'docker-id', variable: 'dockerpwd')]) {
+            sh "docker login -u nithindockerhub1 -p ${dockerpwd}"
+        }
+        sh 'docker push nithindockerhub1/bms-v1'
+    }
+    stage('Run CONTAINER On Dev Server'){
+        def dockerRun = 'docker run -p 8081:8081 -d --name bms-v1 nithindockerhub1/bms-v1'
+        sshagent(['dev-server']) {
+            sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.2.110 ${dockerRun}"
+        }
+    }
+}
